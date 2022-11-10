@@ -27,8 +27,10 @@ elementos   = readtable(nombre_archivo, 'Sheet','elementos');
 prop_mat    = readtable(nombre_archivo, 'Sheet','prop_mat');
 prop_sec    = readtable(nombre_archivo, 'Sheet','prop_sec');
 carga_punt  = readtable(nombre_archivo, 'Sheet','carga_punt');
+carga_distr = readtable(nombre_archivo, 'Sheet','carga_distr');
+restricciones = readtable(nombre_archivo, 'Sheet','restricciones');
 xy          = xy_nod{:, ["x" "y"]};
-nno         = size(xy,1); % número de nodos
+nno         = int16(size(xy,1)); % número de nodos
 
 % Grados de libertad
 ngdl    = 3*nno;
@@ -39,23 +41,17 @@ ngdl    = 3*nno;
 gdl     = reshape(1:ngdl, 3, nno)';
 
 LaG     = elementos{:,["NL1" "NL2"]};
-nelem   = size(LaG,1);
+nelem   = int16(size(LaG,1));
 mat     = elementos{:,"material"};
 sec     = elementos{:,"seccion"};
 tipo    = elementos{:,"tipo"};
 
-nmat    = size(prop_mat,1);
-nsec    = size(prop_sec,1);
+nmat    = int16(size(prop_mat,1));
+nsec    = int16(size(prop_sec,1));
 E   = prop_mat{:,"E"};
 rho = prop_mat{:,"rho"};
 A   = prop_sec{:,"A"};
 I   = prop_sec{:,"I"};
-
-f = zeros(ngdl,1);
-ncp = size(carga_punt,1); % número de cargas puntuales
-for cp = 1:ncp
-    f(gdl(carga_punt{cp,"nodo"},carga_punt{cp,"direccion"})) = carga_punt{cp,"fuerza"};
-end
 
 %% Se dibuja la estructura junto con su numeracion
 figure(1); 
@@ -74,3 +70,148 @@ grid minor
 plot(xy(:,X), xy(:,Y), 'ro');
 text(xy(:,X), xy(:,Y), num2str((1:nno)'));
 title('Numeración de la estructura');
+
+% vector de fuerzas nodales equivalentes global
+f = zeros(ngdl,1);
+ncp = int16(size(carga_punt,1)); % número de cargas puntuales
+for cp = 1:ncp
+    f(gdl(carga_punt{cp,"nodo"},carga_punt{cp,"direccion"})) = carga_punt{cp,"fuerza"};
+end
+
+% fuerzas distribuidas aplicadas sobre los elementos en coordenadas locales
+b1 = carga_distr{:,"b1"};
+b2 = carga_distr{:,"b2"};
+q1 = carga_distr{:,"q1"};
+q2 = carga_distr{:,"q2"};
+
+%% Separo la memoria
+K   = zeros(ngdl);      % matriz de rigidez global
+Ke  = cell(nelem,1);    % matriz de rigidez local en coordenadas globales
+T   = cell(nelem,1);    % matriz de transformacion de coordenadas
+idx = cell(nelem,1);    % almacena los 6 gdls de las barras
+fe  = cell(nelem,1);    % fuerzas nodales equivalentes globales de cada elemento 
+%L   = zeros(nelem,1);   % almacena las longitudes de los elementos
+x1 = xy(LaG(:,NL1),X);
+y1 = xy(LaG(:,NL1),Y);
+x2 = xy(LaG(:,NL2),X);
+y2 = xy(LaG(:,NL2),Y);
+L = hypot(x2-x1,y2-y1);
+%% ensamblo la matriz de rigidez global (K) y vector de fuerzas global (f)
+for e = 1:nelem  % para cada elemento
+   % saco los 6 gdls del elemento e
+   idx{e} = [gdl(LaG(e,NL1),:) gdl(LaG(e,NL2),:)];
+   
+   % matriz de transformacion de coordenadas para la barra e
+   T{e} = calc_Te(x1(e), y1(e), x2(e), y2(e));
+         
+   % matriz de rigidez local expresada en el sistema de coordenadas locales
+   % para el elemento e
+   Kloc = calc_Keloc(tipo{e}, L(e), A(sec(e)), E(mat(e)), I(sec(e)));
+
+   % Inclusión de las fuerzas por peso propio
+   wx = rho(mat(e))*A(sec(e))*g*(y2(e)-y1(e))/L(e)/1000; % kN/m
+   b1(e) = b1(e)-wx;
+   b2(e) = b2(e)-wx;
+   wy = rho(mat(e))*A(sec(e))*g*(x2(e)-x1(e))/L(e)/1000; % kN/m
+   q1(e) = q1(e)-wy;
+   q2(e) = q2(e)-wy;
+
+   % vector de fuerzas nodales equivalentes en coordenadas locales
+   feloc = calc_feloc(tipo{e}, L(e), b1(e), b2(e), q1(e), q2(e));
+
+   % Cambio a coordenadas globales
+   Ke{e} = T{e}'*Kloc*T{e};
+   fe{e} = T{e}'*feloc;
+   
+   K(idx{e},idx{e}) = K(idx{e},idx{e}) + Ke{e}; % sumo Ke{e} a K global
+   f(idx{e})        = f(idx{e})        + fe{e}; % sumo a f global
+end
+
+%% Restricciones y grados de libertad con desplazamientos conocidos
+nres = int16(size(restricciones, 1)); % número de restricciones
+c = zeros(nres,1, 'int16');
+for i=1:nres
+    c(i) = gdl(restricciones{i,"nodo"}, restricciones{i,"direccion"});
+end
+
+% restricciones conocidas
+ac = restricciones{:,"valor"};
+
+% grados de libertad desconocidos
+d = setdiff((1:ngdl)',c);
+
+%% Extraigo las submatrices y especifico las cantidades conocidas
+% f = vector de fuerzas nodales equivalentes
+% q = vector de fuerzas nodales de equilibrio del elemento
+% a = desplazamientos
+
+%| qd |   | Kcc Kcd || ac |   | fd |    recuerde que siempre qc=0
+%|    | = |         ||    | - |    |
+%| qc |   | Kdc Kdd || ad |   | fc |    en este caso en particular fd=0
+
+Kcc = K(c,c); Kcd = K(c,d); fd = f(c);
+Kdc = K(d,c); Kdd = K(d,d); fc = f(d);
+
+%% resuelvo el sistema de ecuaciones
+ad = Kdd\(fc - Kdc*ac);    % calculo desplazamientos desconocidos
+qd = Kcc*ac + Kcd*ad - fd; % calculo fuerzas de equilibrio desconocidas
+
+% armo los vectores de desplazamientos (a) y fuerzas (q)
+a = zeros(ngdl,1);  q = zeros(ngdl,1);   % separo la memoria
+a(c) = ac;   a(d) = ad; % desplazamientos 
+q(c) = qd;  %q(d) = qc; % fuerzas nodales de equilibrio
+
+%% Fuerzas internas en cada elemento
+qe_loc  = cell(nelem,1);
+qe_glob = cell(nelem,1);
+for e = 1:nelem % para cada barra
+   %fprintf('\n\n Fuerzas internas para elemento %d en coord. globales = \n', e);
+   qe_glob{e} = Ke{e}*a(idx{e,:}) - fe{e};
+   %disp(qe_glob{e})
+   
+   %fprintf('\n\n Fuerzas internas para elemento %d en coord. locales = \n', e);
+   qe_loc{e} = T{e}*qe_glob{e};
+   %disp(qe_loc{e});   
+end
+
+%% imprimo los resultados
+format short
+disp('Desplazamientos nodales                                            ')
+disp('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+vect_mov = reshape(a,3,nno)'; % vector de movimientos
+for i = 1:nno
+   fprintf('Nodo %3d: u = %12.4g mm, v = %12.4g mm, theta = %12.4g rad \n', ...
+      i, 1000*vect_mov(i,X), 1000*vect_mov(i,Y), vect_mov(i,TH));
+end
+
+disp(' ');
+disp('Fuerzas nodales de equilibrio (solo imprimo los diferentes de cero)')
+disp('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+qq = reshape(q,3,nno)';
+for i = 1:nno   
+   if ~all(abs(qq(i,:) - [0 0 0]) < 1e-5)
+      fprintf('Nodo %3d qx = %12.4g kN, qy = %12.4g kN, mom = %12.4g kN*m\n', ...
+         i, qq(i,X), qq(i,Y), qq(i,TH));
+   end
+end
+
+%% Dibujar la estructura y su deformada
+esc_def    = 100;               % escalamiento de la deformada
+esc_faxial = 0.00005;           % escalamiento del diagrama de axiales
+esc_V      = 0.001;           % escalamiento del diagrama de cortantes
+esc_M      = 0.001;           % escalamiento del diagrama de momentos
+
+%xdef = xnod + esc_def*vect_mov(:,[X Y]);
+
+figure(2); hold on; title(sprintf('Deformada exagerada %d veces', esc_def));    xlabel('x, m'); ylabel('y, m'); axis equal
+%figure(3); hold on; title('Fuerza axial [kN]');      xlabel('x, m'); ylabel('y, m'); axis equal
+%figure(4); hold on; title('Fuerza cortante [kN]');   xlabel('x, m'); ylabel('y, m'); axis equal
+%figure(5); hold on; title('Momento flector [kN-m]'); xlabel('x, m'); ylabel('y, m'); axis equal
+
+for e = 1:nelem
+   dibujar_graficos(tipo{e},...
+      A(sec(e)), E(mat(e)), I(sec(e)), ...
+      x1(e),y1(e), x2(e),y2(e), b1(e), b2(e), q1(e), q2(e),...
+      qe_loc{e}, T{e}*a(idx{e,:}), ...
+      esc_def, esc_faxial, esc_V, esc_M);
+end
