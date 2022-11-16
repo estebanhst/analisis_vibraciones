@@ -196,7 +196,7 @@ for i = 1:nno
 end
 
 %% Dibujar la estructura y su deformada
-esc_def    = 100;               % escalamiento de la deformada
+esc_def    = 10;               % escalamiento de la deformada
 esc_faxial = 0.00005;           % escalamiento del diagrama de axiales
 esc_V      = 0.001;           % escalamiento del diagrama de cortantes
 esc_M      = 0.001;           % escalamiento del diagrama de momentos
