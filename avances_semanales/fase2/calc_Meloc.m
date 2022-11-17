@@ -86,5 +86,6 @@ switch tipo
     otherwise
         error('Tipo de elemento no soportado.')
 end
-Meloc = M_rhoA+M_rhoI;
+%Meloc = M_rhoA+M_rhoI;
+Meloc = M_rhoA;
 end

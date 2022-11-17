@@ -223,3 +223,16 @@ for e = 1:nelem
       qe_loc{e}, T{e}*a(idx{e,:}), ...
       esc_def, esc_faxial, esc_V, esc_M);
 end
+
+%% ANÁLISIS DINÁMICO
+n = 10; % número de modos a tener en cuenta
+[Phi, lams] = eig(K, M);
+omega = sqrt(diag(lams)); % frecuencias angulares rad/s
+[omega,iModo] = sort(omega);% ordena las frecuencias
+T_mod = 2*pi./omega;            % s - periodo de vibración
+f_mod = 1./T_mod;           % frecuencias Hz
+Phi = Phi(:,iModo);         % ordena los modos según el orden de las frecuencias
+% participación modal
+alfa = Phi'*M*ones(size(Phi(:,1)));
+M_mod_efectiva = alfa.^2;
+participacion_masa = M_mod_efectiva/sum(M_mod_efectiva);
