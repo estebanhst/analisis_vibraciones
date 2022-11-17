@@ -112,7 +112,7 @@ for e = 1:nelem  % para cada elemento
 
    % matriz de masa consistente expresada en el sistema de coordenadas locales
    % para el elemento e
-   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), I(sec(e)), rho(mat(e)), 'consistente');
+   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), E(mat(e)), I(sec(e)), rho(mat(e)));
 
    % Inclusión de las fuerzas por peso propio
    wx = rho(mat(e))*A(sec(e))*g*(y2(e)-y1(e))/L(e)/1000; % kN/m
@@ -226,15 +226,14 @@ end
 
 %% ANÁLISIS DINÁMICO
 n = 10; % número de modos a tener en cuenta
-Kdd = K(d,d); Mdd = M(d,d);
-[Phi, lams] = eig(Kdd, Mdd);
+[Phi, lams] = eig(K, M);
 omega = sqrt(diag(lams)); % frecuencias angulares rad/s
 [omega,iModo] = sort(omega);% ordena las frecuencias
 T_mod = 2*pi./omega;            % s - periodo de vibración
 f_mod = 1./T_mod;           % frecuencias Hz
 Phi = Phi(:,iModo);         % ordena los modos según el orden de las frecuencias
 % participación modal
-alfa = Phi'*Mdd*ones(size(Phi(:,1)));
+alfa = Phi'*M*ones(size(Phi(:,1)));
 M_mod_efectiva = alfa.^2;
 participacion_masa = M_mod_efectiva/sum(M_mod_efectiva);
 
@@ -251,4 +250,4 @@ eq2=(a0/(2*w2))+(a1*w2)/2==zeta;
 alfa=double(linsolve(A,B));
 
 %Ensamblaje Matriz de Amortiguamiento:
-C=alfa(1)*Mdd+alfa(2)*Kdd;
+C=alfa(1)*M+alfa(2)*K;
