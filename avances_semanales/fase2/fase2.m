@@ -107,12 +107,12 @@ for e = 1:nelem  % para cada elemento
    T{e} = calc_Te(x1(e), y1(e), x2(e), y2(e));
          
    % matriz de rigidez local expresada en el sistema de coordenadas locales
-   % para el elemento e
+   % para el elemento e en kN/m
    Kloc = calc_Keloc(tipo{e}, L(e), A(sec(e)), E(mat(e)), I(sec(e)));
 
    % matriz de masa consistente expresada en el sistema de coordenadas locales
-   % para el elemento e
-   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), I(sec(e)), rho(mat(e)), 'consistente');
+   % para el elemento e en kg=N*s²/m -> se convierte a kN*s²/m
+   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), I(sec(e)), rho(mat(e)), 'consistente')/1000;
 
    % Inclusión de las fuerzas por peso propio
    wx = rho(mat(e))*A(sec(e))*g*(y2(e)-y1(e))/L(e)/1000; % kN/m
@@ -238,17 +238,14 @@ alfa = Phi'*Mdd*ones(size(Phi(:,1)));
 M_mod_efectiva = alfa.^2;
 participacion_masa = M_mod_efectiva/sum(M_mod_efectiva);
 
-%Matriz de Amortiguamiento (Método de Rayleight):
+%Matriz de Amortiguamiento (Método de Rayleigh, Libro de Daryl L. Logan):
 zeta=0.05;  %Amortiguamiento
-w1=omega(1);  %Frecuencia del primer modo de vibrar
-w2=omega(2);  %Frecuencia del segundo modo de vibrar
+w1=omega(1,1);  %Frecuencia del primer modo de vibrar
+w2=omega(2,1);  %Frecuencia del segundo modo de vibrar
 
-%creando el sistema de ecuaciones para hallar alfa0 y alfa1
-syms a0 a1
-eq1=(a0/(2*w1))+(a1*w1)/2==zeta;
-eq2=(a0/(2*w2))+(a1*w2)/2==zeta;
-[A,B]=equationsToMatrix([eq1,eq2],[a0,a1]);
-alfa=double(linsolve(A,B));
+%Después de resolver el sistema de ecuaciones para hallar alfa0 y alfa1
+a0=((2*w1*w2)/(w2^2-w1^2))*(w2*zeta-w1*zeta);
+a1=(2/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 
 %Ensamblaje Matriz de Amortiguamiento:
-C=alfa(1)*Mdd+alfa(2)*Kdd;
+C=a0*Mdd+a1*Kdd;

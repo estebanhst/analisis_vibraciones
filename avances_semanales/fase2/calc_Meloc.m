@@ -2,7 +2,8 @@ function Meloc = calc_Meloc(tipo, L, A, I, rho, masa)
 % Gran parte de esta implementación se deriva del trabajo del profesor 
 % Diego Andrés Álvarez Marín https://github.com/diegoandresalvarez/elementosfinitos/blob/master/codigo/vigas/Timoshenko_python/K_exacta_portico_TE.ipynb
 % Calcula la matriz de masa consistente M de un EF de pórtico o de cercha en 
-% coordenadas locales
+% coordenadas locales. 
+% LA MATRIZ DE MASA QUEDA EN kg si rho está en kg/m³ y lo demás en m, m²
 % PARAMETROS:
 % tipo    = 'EE' (pórtico)
 %         = 'RR' (cercha)
