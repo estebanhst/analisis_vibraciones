@@ -20,6 +20,8 @@ close all
 NL1 = 1; NL2 = 2;
 X = 1; Y = 2; TH = 3;
 g = 9.80665; % m/s²
+matriz_masa = 'condensada';
+%matriz_masa = 'consistente';
 
 nombre_archivo = 'entrada.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
@@ -45,6 +47,10 @@ nelem   = int16(size(LaG,1));
 mat     = elementos{:,"material"};
 sec     = elementos{:,"seccion"};
 tipo    = elementos{:,"tipo"};
+% Para la masa de entrepiso
+Af      = elementos{:,"Af"};
+espesor = elementos{:,"espesor"};
+mat_losa= elementos{:,"material_losa"};
 
 nmat    = int16(size(prop_mat,1));
 nsec    = int16(size(prop_sec,1));
@@ -54,22 +60,7 @@ A   = prop_sec{:,"A"};
 I   = prop_sec{:,"I"};
 
 %% Se dibuja la estructura junto con su numeracion
-figure(1); 
-hold on;
-for e = 1:nelem
-   line(xy(LaG(e,:),X), xy(LaG(e,:),Y));
-   
-   % Calculo la posicion del centro de gravedad de la barra
-   cgx = (xy(LaG(e,NL1),X) + xy(LaG(e,NL2),X))/2;
-   cgy = (xy(LaG(e,NL1),Y) + xy(LaG(e,NL2),Y))/2;   
-   h = text(cgx, cgy, num2str(e)); set(h, 'Color', [0 0 1]);
-end
-
-axis equal
-grid minor
-plot(xy(:,X), xy(:,Y), 'ro');
-text(xy(:,X), xy(:,Y), num2str((1:nno)'));
-title('Numeración de la estructura');
+dibujar_numeracion(xy, LaG);
 
 % vector de fuerzas nodales equivalentes global
 f = zeros(ngdl,1);
@@ -92,11 +83,8 @@ Me  = cell(nelem,1);    % matriz de masa consistente en coordenadas globales
 T   = cell(nelem,1);    % matriz de transformacion de coordenadas
 idx = cell(nelem,1);    % almacena los 6 gdls de las barras
 fe  = cell(nelem,1);    % fuerzas nodales equivalentes globales de cada elemento 
-%L   = zeros(nelem,1);   % almacena las longitudes de los elementos
-x1 = xy(LaG(:,NL1),X);
-y1 = xy(LaG(:,NL1),Y);
-x2 = xy(LaG(:,NL2),X);
-y2 = xy(LaG(:,NL2),Y);
+x1 = xy(LaG(:,NL1),X); y1 = xy(LaG(:,NL1),Y);
+x2 = xy(LaG(:,NL2),X); y2 = xy(LaG(:,NL2),Y);
 L = hypot(x2-x1,y2-y1);
 %% ensamblo la matriz de rigidez global (K) y vector de fuerzas global (f)
 for e = 1:nelem  % para cada elemento
@@ -112,8 +100,15 @@ for e = 1:nelem  % para cada elemento
 
    % matriz de masa consistente expresada en el sistema de coordenadas locales
    % para el elemento e en kg=N*s²/m -> se convierte a kN*s²/m
-   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), I(sec(e)), rho(mat(e)), 'consistente')/1000;
-
+   Mloc = calc_Meloc(tipo{e}, L(e), A(sec(e)), I(sec(e)), rho(mat(e)), matriz_masa)/1000;
+   % matriz de masa adicional para las vigas o elementos que reciban el
+   % peso del entrepiso
+   if isnan(Af(e))
+       M_losa = zeros(size(Mloc));
+   else
+       % kN*s²/m
+       M_losa = masa_losa(rho(mat_losa(e)),espesor(e),Af(e),L(e))/1000;
+   end
    % Inclusión de las fuerzas por peso propio
    wx = rho(mat(e))*A(sec(e))*g*(y2(e)-y1(e))/L(e)/1000; % kN/m
    b1(e) = b1(e)-wx;
@@ -127,7 +122,7 @@ for e = 1:nelem  % para cada elemento
 
    % Cambio a coordenadas globales
    Ke{e} = T{e}'*Kloc*T{e};
-   Me{e} = T{e}'*Mloc*T{e};
+   Me{e} = T{e}'*(Mloc+M_losa)*T{e};
    fe{e} = T{e}'*feloc;
    
    K(idx{e},idx{e}) = K(idx{e},idx{e}) + Ke{e}; % sumo Ke{e} a K global
