@@ -24,6 +24,12 @@ Desarrollar un cuadro de referencia de los conceptos vistos a lo largo del curso
 
 ## Implementación de un método paso a paso para el análisis dinámico de estructuras reticulares bajo cargas dinámicas. 
 * Fase 2 - Sábado 19 de noviembre de 2022
+### Requerimientos mínimos
+* Construcción de matriz de masa condensada - pudiéndose implementar la matriz de masa consistente por tipo de elemento.
+* Construcción de matriz de amortiguamiento - pudiéndose implementar por método de Rayleigh, método extendido de Rayleigh o formulaciones alternativas.
+* Integración temporal - pudiéndose implementar por método de Newmark, Alpha-Generalizado.
+* Cómputo de modos principales de vibrar.
+* Análisis de carga sinusoidal y de carga aleatoria de sismo.
 
 ## Implementación de un método de análisis de balance de energía.
 * Fase 3 - Sábado 26 de noviembre de 2022
