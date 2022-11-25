@@ -20,8 +20,8 @@ close all
 NL1 = 1; NL2 = 2;
 X = 1; Y = 2; TH = 3;
 g = 9.80665; % m/s²
-matriz_masa = 'condensada';
-%matriz_masa = 'consistente';
+%matriz_masa = 'condensada';
+matriz_masa = 'consistente';
 
 nombre_archivo = 'entrada.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
@@ -31,6 +31,8 @@ prop_sec    = readtable(nombre_archivo, 'Sheet','prop_sec');
 carga_punt  = readtable(nombre_archivo, 'Sheet','carga_punt');
 carga_distr = readtable(nombre_archivo, 'Sheet','carga_distr');
 restricciones = readtable(nombre_archivo, 'Sheet','restricciones');
+acelerograma=readtable(nombre_archivo, 'Sheet','acelerograma');
+p=acelerograma{:,"aceleracion"};         %Vector de registros del acelerograma del sismo
 xy          = xy_nod{:, ["x" "y"]};
 nno         = int16(size(xy,1)); % número de nodos
 
@@ -219,7 +221,7 @@ for e = 1:nelem
       esc_def, esc_faxial, esc_V, esc_M);
 end
 
-%% ANÁLISIS DINÁMICO
+%% ANÁLISIS MODAL
 n = 10; % número de modos a tener en cuenta
 Kdd = K(d,d); Mdd = M(d,d);
 [Phi, lams] = eig(Kdd, Mdd);
@@ -233,7 +235,7 @@ alfa = Phi'*Mdd*ones(size(Phi(:,1)));
 M_mod_efectiva = alfa.^2;
 participacion_masa = M_mod_efectiva/sum(M_mod_efectiva);
 
-%Matriz de Amortiguamiento (Método de Rayleigh, Libro de Daryl L. Logan):
+%% Matriz de Amortiguamiento (Método de Rayleigh, Libro de Daryl L. Logan):
 zeta=0.05;  %Amortiguamiento
 w1=omega(1,1);  %Frecuencia del primer modo de vibrar
 w2=omega(2,1);  %Frecuencia del segundo modo de vibrar
@@ -243,4 +245,37 @@ a0=((2*w1*w2)/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 a1=(2/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 
 %Ensamblaje Matriz de Amortiguamiento:
-C=a0*Mdd+a1*Kdd;
+% a0*Mdd corresponde al amortiguamiento externo y a1Kdd es el
+% amortiguamiento material o interno.
+C=a0*Mdd+a1*Kdd; % kN*s/m
+
+%% Análisis dinámico. El acelerograma se ingresa en el Excel en m/s²
+% n: número de modos a considerar
+u = zeros(ngdl, size(acelerograma,1)); p = zeros(size(u));
+[u(d,:), p(d,:)] = din_Newmark(Mdd, C, Kdd, Phi, n, acelerograma);
+% u: desplazamientos en metros
+% p: fuerza en kN
+% cada fila corresponde a un grado de libertad. Las aceleraciones del sismo
+% fueron colocadas únicamente en los grados de libertad horizontales
+% (dirección 1)
+figure
+title('Desplazamientos en el último piso')
+xlabel('Tiempo (s)')
+ylabel('Desplazamiento (mm)')
+nodos_ultimo_piso = find(xy(:,Y)==max(xy(:,Y)))';
+hold on
+legend
+for i = nodos_ultimo_piso   
+    plot(acelerograma{:,'tiempo'}', u(gdl(i,X),:)*1000, 'DisplayName', sprintf('Nodo %d',i))
+end
+
+figure
+title('Desplazamientos en los nodos, dirección X')
+xlabel('Tiempo (s)')
+ylabel('Desplazamiento (mm)')
+nodos_ultimo_piso = find(xy(:,Y)==max(xy(:,Y)))';
+hold on
+legend
+for i = 1:nno   
+    plot(acelerograma{:,'tiempo'}', u(gdl(i,X),:)*1000, 'DisplayName', sprintf('Nodo %d',i))
+end
