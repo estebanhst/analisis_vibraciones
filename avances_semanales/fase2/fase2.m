@@ -23,7 +23,8 @@ g = 9.80665; % m/s²
 %matriz_masa = 'condensada';
 matriz_masa = 'consistente';
 
-nombre_archivo = 'entrada.xlsx';
+%nombre_archivo = 'entrada.xlsx';
+nombre_archivo = 'entrada_sin_losas.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
 elementos   = readtable(nombre_archivo, 'Sheet','elementos');
 prop_mat    = readtable(nombre_archivo, 'Sheet','prop_mat');
@@ -222,7 +223,7 @@ for e = 1:nelem
 end
 
 %% ANÁLISIS MODAL
-n = 10; % número de modos a tener en cuenta
+n = 12; % número de modos a tener en cuenta
 Kdd = K(d,d); Mdd = M(d,d);
 [Phi, lams] = eig(Kdd, Mdd);
 omega = sqrt(diag(lams)); % frecuencias angulares rad/s

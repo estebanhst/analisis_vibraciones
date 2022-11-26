@@ -2,8 +2,8 @@ function [u, p] = din_Newmark(m, c, k, Phi, n, acelerograma)
 % CONSTANTES MÉTODO DE NEWMARK
 % Ver Capítulo 16, Tabla 16.2.2 Dinámica de Anil K. Chopra
 gammaN = 1/2;
-betaN = 1/6; % aceleración lineal
-% betaN = 1/4; % promedio de aceleración constante
+%betaN = 1/6; % aceleración lineal
+betaN = 1/4; % promedio de aceleración constante
 ngdl = size(k,1);
 Phi = Phi(:,1:n);
 M = Phi'*m*Phi;
@@ -19,7 +19,7 @@ for i=1:3:ngdl
     a_t(i,:)=a;
 end
 for i=1:np
-    p(:,i)=m*a_t(:,i);
+    p(:,i)=-m*a_t(:,i);
 end
 
 
