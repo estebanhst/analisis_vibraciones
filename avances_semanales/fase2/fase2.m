@@ -20,7 +20,7 @@ close all
 NL1 = 1; NL2 = 2;
 X = 1; Y = 2; TH = 3;
 g = 9.80665; % m/s²
-%matriz_masa = 'condensada';
+% matriz_masa = 'condensada';
 matriz_masa = 'consistente';
 
 %nombre_archivo = 'entrada.xlsx';
@@ -246,14 +246,16 @@ a0=((2*w1*w2)/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 a1=(2/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 
 %Ensamblaje Matriz de Amortiguamiento:
-% a0*Mdd corresponde al amortiguamiento externo y a1Kdd es el
+% a0*M corresponde al amortiguamiento externo y a1K es el
 % amortiguamiento material o interno.
-C=a0*Mdd+a1*Kdd; % kN*s/m
+C=a0*M+a1*K; % kN*s/m
+Cdd=C(d,d);
 
 %% Análisis dinámico. El acelerograma se ingresa en el Excel en m/s²
 % n: número de modos a considerar
 u = zeros(ngdl, size(acelerograma,1)); p = zeros(size(u));
-[u(d,:), p(d,:)] = din_Newmark(Mdd, C, Kdd, Phi, n, acelerograma);
+comp = zeros(ngdl,1); comp(gdl(:,X))=1;
+[u(d,:), p(d,:)] = din_Newmark(Mdd, Cdd, Kdd, Phi, n, acelerograma, comp(d));
 % u: desplazamientos en metros
 % p: fuerza en kN
 % cada fila corresponde a un grado de libertad. Las aceleraciones del sismo

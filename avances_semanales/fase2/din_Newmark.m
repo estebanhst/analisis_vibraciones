@@ -1,6 +1,7 @@
-function [u, p] = din_Newmark(m, c, k, Phi, n, acelerograma)
+function [u, p] = din_Newmark(m, c, k, Phi, n, acelerograma, comp)
 % CONSTANTES MÉTODO DE NEWMARK
 % Ver Capítulo 16, Tabla 16.2.2 Dinámica de Anil K. Chopra
+% iota es uno si en dicha fila se considera la aceleración, en otro caso, 0
 gammaN = 1/2;
 %betaN = 1/6; % aceleración lineal
 betaN = 1/4; % promedio de aceleración constante
@@ -13,13 +14,12 @@ t = acelerograma{:,1}';
 a = acelerograma{:,2}';
 dt = t(2)-t(1);
 np = length(t);
-a_t = zeros(ngdl, np); % las filas muestran la variación de la aceleración de un gdl respecto al tiempo
 p = zeros(ngdl, np);
-for i=1:3:ngdl
-    a_t(i,:)=a;
-end
+% for i=1:3:ngdl
+%     a_t(i,:)=a;
+% end
 for i=1:np
-    p(:,i)=-m*a_t(:,i);
+    p(:,i)=-m*comp*a(i);
 end
 
 
