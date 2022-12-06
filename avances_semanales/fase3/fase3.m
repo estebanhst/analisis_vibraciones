@@ -23,7 +23,7 @@ g = 9.80665; % m/s²
 matriz_masa = 'consistente';
 %% == LECTURA DE DATOS ==
 nombre_archivo = 'entrada1.xlsx';
-%nombre_archivo = 'entrada2.xlsx';
+nombre_archivo = 'entrada2.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
 elementos   = readtable(nombre_archivo, 'Sheet','elementos');
 prop_mat    = readtable(nombre_archivo, 'Sheet','prop_mat');
