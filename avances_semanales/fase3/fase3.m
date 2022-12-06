@@ -18,10 +18,12 @@ clc
 NL1 = 1; NL2 = 2;
 X = 1; Y = 2; TH = 3;
 g = 9.80665; % m/s²
+%% == MATRIZ DE MASA CONDENSADA O CONSISTENTE ==
 % matriz_masa = 'condensada';
 matriz_masa = 'consistente';
+%% == LECTURA DE DATOS ==
 nombre_archivo = 'entrada1.xlsx';
-nombre_archivo = 'entrada2.xlsx';
+%nombre_archivo = 'entrada2.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
 elementos   = readtable(nombre_archivo, 'Sheet','elementos');
 prop_mat    = readtable(nombre_archivo, 'Sheet','prop_mat');
@@ -42,18 +44,16 @@ ngdl    = 3*nno;
 % col3 = gdl en direccion angular antihoraria
 gdl     = reshape(1:ngdl, 3, nno)';
 
-LaG     = elementos{:,["NL1" "NL2"]};
-nelem   = int16(size(LaG,1));
-mat     = elementos{:,"material"};
+LaG     = elementos{:,["NL1" "NL2"]}; % conectividades
+nelem   = int16(size(LaG,1)); % número de elementos
+mat     = elementos{:,"material"}; 
 sec     = elementos{:,"seccion"};
 tipo    = elementos{:,"tipo"};
 % Para la masa de entrepiso
 Af      = elementos{:,"Af"};
 espesor = elementos{:,"espesor"};
 mat_losa= elementos{:,"material_losa"};
-
-nmat    = int16(size(prop_mat,1));
-nsec    = int16(size(prop_sec,1));
+% vectores de propiedades de materiales y secciones
 E   = prop_mat{:,"E"};
 rho = prop_mat{:,"rho"};
 A   = prop_sec{:,"A"};
@@ -70,12 +70,10 @@ for cp = 1:ncp
 end
 
 % fuerzas distribuidas aplicadas sobre los elementos en coordenadas locales
-b1 = carga_distr{:,"b1"};
-b2 = carga_distr{:,"b2"};
-q1 = carga_distr{:,"q1"};
-q2 = carga_distr{:,"q2"};
+b1 = carga_distr{:,"b1"};b2 = carga_distr{:,"b2"};
+q1 = carga_distr{:,"q1"};q2 = carga_distr{:,"q2"};
 
-%% Separo la memoria
+%% Separo la memoria para el ensamblaje matricial (Rigidez y Masa)
 K   = zeros(ngdl);      % matriz de rigidez global
 M   = zeros(ngdl);      % matriz de masa consistente global
 Ke  = cell(nelem,1);    % matriz de rigidez local en coordenadas globales
@@ -83,9 +81,10 @@ Me  = cell(nelem,1);    % matriz de masa consistente en coordenadas globales
 T   = cell(nelem,1);    % matriz de transformacion de coordenadas
 idx = cell(nelem,1);    % almacena los 6 gdls de las barras
 fe  = cell(nelem,1);    % fuerzas nodales equivalentes globales de cada elemento 
+% vectores de cordenadas de elementos NL1=(x1,y1), NL2=(x2,y2)
 x1 = xy(LaG(:,NL1),X); y1 = xy(LaG(:,NL1),Y);
 x2 = xy(LaG(:,NL2),X); y2 = xy(LaG(:,NL2),Y);
-L = hypot(x2-x1,y2-y1);
+L = hypot(x2-x1,y2-y1); % Longitudes de elementos
 %% ensamblo la matriz de rigidez global (K) y vector de fuerzas global (f)
 for e = 1:nelem  % para cada elemento
    % saco los 6 gdls del elemento e
@@ -148,7 +147,7 @@ d = setdiff((1:ngdl)',c);
 % q = vector de fuerzas nodales de equilibrio del elemento
 % a = desplazamientos
 
-%| qd |   | Kcc Kcd || ac |   | fd |    recuerde que siempre qc=0
+%| qd |   | Kcc Kcd || ac |   | fd |    siempre qc=0
 %|    | = |         ||    | - |    |
 %| qc |   | Kdc Kdd || ad |   | fc |    en este caso en particular fd=0
 
@@ -199,7 +198,7 @@ for i = 1:nno
 end
 
 %% Dibujar la estructura y su deformada
-esc_def    = 100;               % escalamiento de la deformada
+esc_def = 100;               % escalamiento de la deformada
 figure(); hold on; title(sprintf('Deformada exagerada %d veces', esc_def));    xlabel('x, m'); ylabel('y, m'); axis equal
 for e = 1:nelem
    dibujar_deformada(tipo{e},...
@@ -211,11 +210,11 @@ end
 
 %% ANÁLISIS MODAL
 n = 12; % número de modos a tener en cuenta
-Kdd = K(d,d); Mdd = M(d,d);
+Kdd = K(d,d); Mdd = M(d,d); % Matrices para el análisis dinámico (no se consideran gdl conocidos)
 [Phi, lams] = eig(Kdd, Mdd);
 omega = sqrt(diag(lams)); % frecuencias angulares rad/s
 [omega,iModo] = sort(omega);% ordena las frecuencias
-T_mod = 2*pi./omega;            % s - periodo de vibración
+T_mod = 2*pi./omega;        % s - periodo de vibración
 f_mod = 1./T_mod;           % frecuencias Hz
 Phi = Phi(:,iModo);         % ordena los modos según el orden de las frecuencias
 % participación modal
@@ -238,18 +237,18 @@ a1=(2/(w2^2-w1^2))*(w2*zeta-w1*zeta);
 C=a0*M+a1*K; % kN*s/m
 Cdd=C(d,d);
 
-%% Análisis dinámico. El acelerograma se ingresa en el Excel en m/s² o se define como función
+%% Análisis dinámico + Balance Energía. El acelerograma se ingresa en el Excel en m/s² o se define como función
 % n: número de modos a considerar
-% COMENTAR PARA USAR EL SISMO INGRESADO EN EL EXCEL
-%{ USANDO FUNCIÓN SINUSOIDAL
+% COMENTAR PARA USAR EL SISMO INGRESADO EN EL EXCEL borrar punto sgte línea
+%{.
 % FUNCIÓN SINUSOIDAL
 t = (0:0.01:15)'; % s
 v = 2*pi; % frecuencia angular de la función sinusoidal
 aceleracion = 0.5*sin(v*t);
-% los últimos 5 segundos se hacen 0 las aceleraciones
+% si se quiere, los últimos 5 segundos se hacen 0 las aceleraciones
 %aceleracion(t>10) = 0;
-%}
 acelerograma = table(t, aceleracion, 'VariableNames',{'tiempo', 'aceleracion'});
+%}
 u = zeros(ngdl, size(acelerograma,1)); p = zeros(size(u));
 r = zeros(ngdl,1); r(gdl(:,X))=1;
 [u(d,:), p(d,:), B_E] = balance_energia(Mdd, Cdd, Kdd, fc, Phi, n, acelerograma, r(d), nombre_archivo);
@@ -258,6 +257,9 @@ r = zeros(ngdl,1); r(gdl(:,X))=1;
 % cada fila corresponde a un grado de libertad. Las aceleraciones del sismo
 % fueron colocadas únicamente en los grados de libertad horizontales
 % (dirección 1)
+% B_E: energías en kN m
+
+%% GRÁFICOS DEL ANÁLISIS DINÁMICO
 figure
 title('Desplazamientos en el último piso')
 xlabel('Tiempo (s)')
