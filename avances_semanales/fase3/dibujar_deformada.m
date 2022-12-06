@@ -1,9 +1,6 @@
-function dibujar_graficos(tipo, A, E, I, x1,y1, x2,y2, b1,b2, q1,q2, qe, ae, esc_def, esc_faxial, esc_V, esc_M)
+function dibujar_deformada(tipo, A, E, I, x1,y1, x2,y2, b1,b2, q1,q2, qe, ae, esc_def)
 %{
-Esta función dibuja el elemento de pórtico/cercha deformado junto con sus 
-respectivos diagramas de fuerza axial, fuerza cortante y momento flector.
-El diagrama de momento flector se grafica en el lado opuesto de la fibra
-a tracción
+Esta función dibuja el elemento de pórtico/cercha deformado.
 PARAMETROS DE ENTRADA (junto con algunos ejemplos):
 tipo    = 'EE' (pórtico)
         = 'RR' (cercha)
@@ -28,13 +25,8 @@ ae = [ 0.01,        % u1, v1, t1 desplazamientos nodo 1 en coord. locales
        0.02,
       -0.07 ]
 esc_def    = 10     % escalamiento de la deformada
-esc_faxial = 10     % escalamiento del diagrama de axiales
-esc_V      = 10     % escalamiento del diagrama de cortantes
-esc_M      = 10     % escalamiento del diagrama de momentos
-con_lineas = {True/False} % graficar lineas verticales en diagramas de M/V/A
 %}
 X = 1; Y = 2;
-X1 = 1; Y1 = 2; M1 = 3; X2 = 4; Y2 = 5; M2   = 6; 
 npuntos = 1001;
 L = hypot(x2-x1, y2-y1);
 x = linspace(0, L, npuntos);
@@ -86,7 +78,6 @@ T       = [ cos(ang) -sin(ang)
             sin(ang) cos(ang)];
       
 % Dibujar deformada
-figure(2)
 pos = T*[   s+esc_def*u
             esc_def*v];
 
@@ -94,39 +85,4 @@ xx = pos(X,:) + x1;
 yy = pos(Y,:) + y1;
 
 plot([x1 x2], [y1 y2], 'b-', xx, yy, 'r-','LineWidth',2);
-
-% % Dibujar los diagramas de fuerza axial 
-% figure(3)
-% pos = T*[ s; esc_faxial*axial ]; % escalamiento del diagrama
-% 
-% ss = pos(X,:) + x1;
-% aa = pos(Y,:) + y1;
-% 
-% plot([x1 x2], [y1 y2], 'b-', [x1 ss x2], [y1 aa y2], 'r-','LineWidth',2);
-% text(ss(1),   aa(1),   num2str(-qe(X1)));
-% text(ss(end), aa(end), num2str(+qe(X2)));
-
-% % Dibujar los diagramas de fuerza cortante
-% figure(4)
-% pos = T*[ s; esc_V*V ]; % escalamiento del diagrama
-% 
-% ss = pos(X,:) + x1;
-% vv = pos(Y,:) + y1;
-% 
-% plot([x1 x2], [y1 y2], 'b-', [x1 ss x2], [y1 vv y2], 'r-','LineWidth',2);
-% text(ss(1),   vv(1),   num2str(+qe(Y1)));
-% text(ss(end), vv(end), num2str(-qe(Y2)));
-
-% %% Dibujar los diagramas de momento flector
-% figure(5)
-% pos = T*[ s; esc_M*M ]; % escalamiento del diagrama
-% 
-% ss = pos(X,:) + x1;
-% mm = pos(Y,:) + y1;
-% 
-% plot([x1 x2], [y1 y2], 'b-', [x1 ss x2], [y1 mm y2], 'r-','LineWidth',2);
-% text(ss(1),   mm(1),   num2str(-qe(M1)));
-% text(ss(end), mm(end), num2str(+qe(M2)));
-% [minM,idminM] = min(M); text(ss(idminM), mm(idminM), num2str(minM));
-% [maxM,idmaxM] = max(M); text(ss(idmaxM), mm(idmaxM), num2str(maxM));
 end

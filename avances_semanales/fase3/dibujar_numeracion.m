@@ -1,4 +1,4 @@
-function dibujar_numeracion(xy, LaG)
+function dibujar_numeracion(xy, LaG, nombre_archivo)
 X = 1; NL1 = 1; Y=2; NL2=2; nno = size(xy,1); nelem = size(LaG,1);
 figure; 
 hold on;
@@ -15,5 +15,5 @@ axis equal
 grid minor
 plot(xy(:,X), xy(:,Y), 'ro');
 text(xy(:,X), xy(:,Y), num2str((1:nno)'));
-title('NUMERACIÓN DE LA ESTRUCTURA');
+title(sprintf('NUMERACIÓN DE LA ESTRUCTURA %s', nombre_archivo));
 end

@@ -20,9 +20,8 @@ X = 1; Y = 2; TH = 3;
 g = 9.80665; % m/s²
 % matriz_masa = 'condensada';
 matriz_masa = 'consistente';
-
-%nombre_archivo = 'entrada.xlsx';
-nombre_archivo = 'entrada.xlsx';
+nombre_archivo = 'entrada1.xlsx';
+nombre_archivo = 'entrada2.xlsx';
 xy_nod      = readtable(nombre_archivo, 'Sheet','xy_nod');
 elementos   = readtable(nombre_archivo, 'Sheet','elementos');
 prop_mat    = readtable(nombre_archivo, 'Sheet','prop_mat');
@@ -61,7 +60,7 @@ A   = prop_sec{:,"A"};
 I   = prop_sec{:,"I"};
 
 %% Se dibuja la estructura junto con su numeracion
-dibujar_numeracion(xy, LaG);
+dibujar_numeracion(xy, LaG, nombre_archivo);
 
 % vector de fuerzas nodales equivalentes global
 f = zeros(ngdl,1);
@@ -200,24 +199,14 @@ for i = 1:nno
 end
 
 %% Dibujar la estructura y su deformada
-esc_def    = 10;               % escalamiento de la deformada
-esc_faxial = 0.00005;           % escalamiento del diagrama de axiales
-esc_V      = 0.001;           % escalamiento del diagrama de cortantes
-esc_M      = 0.001;           % escalamiento del diagrama de momentos
-
-%xdef = xnod + esc_def*vect_mov(:,[X Y]);
-
-figure(2); hold on; title(sprintf('Deformada exagerada %d veces', esc_def));    xlabel('x, m'); ylabel('y, m'); axis equal
-%figure(3); hold on; title('Fuerza axial [kN]');      xlabel('x, m'); ylabel('y, m'); axis equal
-%figure(4); hold on; title('Fuerza cortante [kN]');   xlabel('x, m'); ylabel('y, m'); axis equal
-%figure(5); hold on; title('Momento flector [kN-m]'); xlabel('x, m'); ylabel('y, m'); axis equal
-
+esc_def    = 100;               % escalamiento de la deformada
+figure(); hold on; title(sprintf('Deformada exagerada %d veces', esc_def));    xlabel('x, m'); ylabel('y, m'); axis equal
 for e = 1:nelem
-   dibujar_graficos(tipo{e},...
+   dibujar_deformada(tipo{e},...
       A(sec(e)), E(mat(e)), I(sec(e)), ...
       x1(e),y1(e), x2(e),y2(e), b1(e), b2(e), q1(e), q2(e),...
       qe_loc{e}, T{e}*a(idx{e,:}), ...
-      esc_def, esc_faxial, esc_V, esc_M);
+      esc_def);
 end
 
 %% ANÁLISIS MODAL
@@ -263,7 +252,7 @@ aceleracion = 0.5*sin(v*t);
 acelerograma = table(t, aceleracion, 'VariableNames',{'tiempo', 'aceleracion'});
 u = zeros(ngdl, size(acelerograma,1)); p = zeros(size(u));
 r = zeros(ngdl,1); r(gdl(:,X))=1;
-[u(d,:), p(d,:), B_E] = balance_energia(Mdd, Cdd, Kdd, fc, Phi, n, acelerograma, r(d));
+[u(d,:), p(d,:), B_E] = balance_energia(Mdd, Cdd, Kdd, fc, Phi, n, acelerograma, r(d), nombre_archivo);
 % u: desplazamientos en metros
 % p: fuerza en kN
 % cada fila corresponde a un grado de libertad. Las aceleraciones del sismo
