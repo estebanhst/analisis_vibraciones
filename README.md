@@ -32,4 +32,9 @@ Desarrollar un cuadro de referencia de los conceptos vistos a lo largo del curso
 * Análisis de carga sinusoidal y de carga aleatoria de sismo.
 
 ## Implementación de un método de análisis de balance de energía.
-* Fase 3 - Sábado 26 de noviembre de 2022
+* Fase 3 - Martes 6 de diciembre de 2022
+### Requerimientos mínimos
+* Balance de energía del sistema, sometiendo la estructura a una aceleración sinusoidal en su base.
+* Balance de energía del sistema, eliminando una viga del primer nivel desde un inicio, sometiendo la estructura a una aceleración sinusoidal en su base.
+* Balance de energía del sistema, eliminando una viga del primer nivel en un punto intermedio del análisis dinámico, sometiendo la estructura a una aceleración sinuosoidal en su base.
+* Análisis de las diferentes mediciones hechas en términos energéticos en los tres casos y su interpretación.
